@@ -1,0 +1,53 @@
+/*
+ * 设计稿基准：1125 x 7579 (3x)，1x = 375px
+ * 所有 vw 换算：value_3x / 1125 * 100
+ * 所有 px 换算：value_3x / 3
+ */
+
+.page {
+  width: 100%;
+  max-width: 750px;
+  margin: 0 auto;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  background-color: #f5ede6;
+  background-size: 100% auto;
+  background-repeat: no-repeat;
+  background-position: top center;
+}
+
+/* 头部占位：让背景图的 hero 部分（花卉+车）完整显示 */
+/* 设计稿中表单卡片起始 y=1717，宽度=1125 → 1717/1125 = 152.6% */
+/* padding-top 百分比相对于自身宽度，完美保持比例 */
+.hero-spacer {
+  padding-top: 152.6%;
+}
+
+/* 活动规则图片 */
+.rules-img {
+  width: 100%;
+  display: block;
+  margin-top: 2%;
+  content-visibility: auto;
+  contain-intrinsic-size: 100vw 337vw;
+}
+
+/* ---- 开发环境弹窗演示文字 ---- */
+.demo-links {
+  display: flex;
+  justify-content: center;
+  gap: 5.33vw;
+  padding: 4vw 0 6vw;
+}
+
+.demo-links span {
+  font-size: 3.2vw;
+  color: #999;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 0.5vw;
+}
+
+.demo-links span:active {
+  color: #333;
+}

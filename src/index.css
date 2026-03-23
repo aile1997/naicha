@@ -10,15 +10,30 @@
 
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 html, body, #root {
   margin: 0;
   min-height: 100dvh;
   width: 100%;
+  background: #f0e8e0;
 }
 
 body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+img {
+  max-width: 100%;
+}
+
+a {
+  text-decoration: none;
+}
+
+input, select, button, textarea {
+  font-family: inherit;
 }

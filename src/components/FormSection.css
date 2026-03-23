@@ -1,0 +1,231 @@
+/*
+ * 表单卡片区域
+ * 设计稿：form-bg 位于 y=1717, w=1125, h=1747
+ * 表单内容 padding：左右 149/1125=13.24%
+ * 输入框尺寸：w=828, h=110 → 高度 110/1125=9.78vw (相对视口)
+ * 元素间距：约 27px(3x) = 9px(1x) = 2.4vw
+ */
+
+.form-section {
+  position: relative;
+  width: 100%;
+}
+
+/* 白色卡片背景（form-bg.png）撑满 form-section 高度 */
+.form-card-bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.form-body {
+  position: relative;
+  z-index: 1;
+  /* 顶部内边距：第一个输入框距卡片顶 169/1125=15.02% */
+  padding: 15% 13.24% 12%;
+  display: flex;
+  flex-direction: column;
+  gap: 2.4vw;
+}
+
+/* ---- 输入框通用 ---- */
+.form-input {
+  width: 100%;
+  height: 9.78vw;
+  border: 1px solid #d5d5d5;
+  border-radius: 5.33vw;
+  padding: 0 4.67vw;
+  font-size: 3.73vw;
+  color: #333;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.form-input::placeholder {
+  color: #b3b3b3;
+}
+
+/* ---- 省/市一行 ---- */
+.form-row {
+  display: flex;
+  gap: 2.4vw;
+}
+
+.form-row .form-select-wrap {
+  flex: 1;
+}
+
+/* ---- 下拉选择器 ---- */
+.form-select-wrap {
+  position: relative;
+}
+
+.form-select-wrap.full {
+  width: 100%;
+}
+
+.form-select {
+  width: 100%;
+  height: 9.78vw;
+  border: 1px solid #d5d5d5;
+  border-radius: 5.33vw;
+  padding: 0 8vw 0 4.67vw;
+  font-size: 3.73vw;
+  color: #333;
+  background: #fff;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+}
+
+/* placeholder 色 */
+.form-select:has(option[value=""]:checked) {
+  color: #b3b3b3;
+}
+
+.select-arrow {
+  position: absolute;
+  right: 4vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 1.33vw solid transparent;
+  border-right: 1.33vw solid transparent;
+  border-top: 1.6vw solid #999;
+  pointer-events: none;
+}
+
+/* ---- 车系行 ---- */
+.form-model-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 9.78vw;
+  border: 1px solid #d5d5d5;
+  border-radius: 5.33vw;
+  padding: 0 4.67vw;
+  background: #fff;
+}
+
+.model-label {
+  font-size: 3.73vw;
+  color: #333;
+}
+
+.model-counter {
+  font-size: 3.2vw;
+  color: #b3b3b3;
+}
+
+/* ---- 隐私协议（在上传区域之前） ---- */
+.privacy-row {
+  display: flex;
+  align-items: center;
+  gap: 1.6vw;
+  cursor: pointer;
+  font-size: 2.93vw;
+  color: #999;
+  margin-top: 0.8vw;
+}
+
+.privacy-row input[type="checkbox"] {
+  display: none;
+}
+
+.privacy-check {
+  width: 3.6vw;
+  height: 3.6vw;
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.privacy-row input[type="checkbox"]:checked + .privacy-check {
+  background: #2d2d2d;
+  border-color: #2d2d2d;
+}
+
+.privacy-row input[type="checkbox"]:checked + .privacy-check::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 1.2vw;
+  height: 2vw;
+  border: solid #fff;
+  border-width: 0 0.4vw 0.4vw 0;
+  transform: translate(-50%, -50%) rotate(45deg);
+}
+
+.privacy-text {
+  line-height: 1.4;
+}
+
+.privacy-link {
+  color: #c8956c;
+  text-decoration: none;
+}
+
+/* ---- 上传区域 ---- */
+/* 隐私→上传 间距比常规 gap 更大：63(3x)/1125*100=5.6vw */
+.upload-area:first-of-type {
+  margin-top: 3.2vw;
+}
+
+.upload-area {
+  width: 100%;
+  /* 设计稿 827 x 228 */
+  aspect-ratio: 827 / 228;
+  border: 1px dashed #ccc;
+  border-radius: 2.67vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  background: #fff;
+}
+
+.upload-icon {
+  height: 45%;
+  object-fit: contain;
+}
+
+.upload-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* ---- 提交按钮 ---- */
+.submit-btn {
+  width: 100%;
+  height: 9.6vw;
+  border: none;
+  border-radius: 5.33vw;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 4vw;
+  font-weight: 500;
+  letter-spacing: 0.4vw;
+  cursor: pointer;
+  margin-top: 0.8vw;
+}
+
+.submit-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.submit-btn:active:not(:disabled) {
+  opacity: 0.85;
+}
