@@ -115,12 +115,15 @@ export default function FormSection({ onSubmit, onOpenQuery }: FormSectionProps)
     if (!pickerTarget) return;
     setForm((prev) => {
       const next = { ...prev, [pickerTarget]: value };
-      // 省份变更时清空城市和经销商
       if (pickerTarget === "province" && value !== prev.province) {
         next.city = "";
         next.dealer = "";
+        // 直辖市只有一个城市，自动填充
+        const cities = dealers[value] ? Object.keys(dealers[value]) : [];
+        if (cities.length === 1) {
+          next.city = cities[0];
+        }
       }
-      // 城市变更时清空经销商
       if (pickerTarget === "city" && value !== prev.city) {
         next.dealer = "";
       }
