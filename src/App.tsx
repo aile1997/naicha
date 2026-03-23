@@ -34,31 +34,34 @@ export default function App() {
   }
 
   return (
-    <div
-      className={`page ${bgLoaded ? "page--loaded" : ""}`}
-      style={{ backgroundImage: `url(${bgFull})` }}
-    >
-      <div className="hero-spacer" />
+    <>
+      <div
+        className={`page ${bgLoaded ? "page--loaded" : ""}`}
+        style={{ backgroundImage: `url(${bgFull})` }}
+      >
+        <div className="hero-spacer" />
 
-      <FormSection onSubmit={handleFormSubmit} />
+        <FormSection onSubmit={handleFormSubmit} />
 
-      <img
-        className="rules-img"
-        src={rulesImg}
-        alt="活动规则"
-        loading="lazy"
-      />
+        <img
+          className="rules-img"
+          src={rulesImg}
+          alt="活动规则"
+          loading="lazy"
+        />
 
-      {/* 弹窗演示入口（仅开发环境，紧跟活动规则下方） */}
-      {import.meta.env.DEV && (
-        <div className="demo-links">
-          <span onClick={() => openDemo("thanks")}>未中奖</span>
-          <span onClick={() => openDemo("reviewing")}>审核中</span>
-          <span onClick={() => openDemo("won")}>中奖</span>
-          <span onClick={() => openDemo("query")}>查询</span>
-        </div>
-      )}
+        {/* 弹窗演示入口（仅开发环境，紧跟活动规则下方） */}
+        {import.meta.env.DEV && (
+          <div className="demo-links">
+            <span onClick={() => openDemo("thanks")}>未中奖</span>
+            <span onClick={() => openDemo("reviewing")}>审核中</span>
+            <span onClick={() => openDemo("won")}>中奖</span>
+            <span onClick={() => openDemo("query")}>查询</span>
+          </div>
+        )}
+      </div>
 
+      {/* 弹窗放在 .page 外部，避免 filter 影响 position:fixed */}
       <Suspense>
         {modal && (
           <ResultModal
@@ -69,6 +72,6 @@ export default function App() {
           />
         )}
       </Suspense>
-    </div>
+    </>
   );
 }
