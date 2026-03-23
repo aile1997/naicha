@@ -255,6 +255,7 @@ export default function FormSection({ onSubmit, onOpenQuery }: FormSectionProps)
       </div>
 
       <Picker
+        key={pickerTarget}
         visible={pickerTarget !== null}
         title={getPickerTitle()}
         options={getPickerOptions()}
