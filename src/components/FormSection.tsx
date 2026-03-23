@@ -78,7 +78,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
 
       <div className="form-body">
         <input
-          className="form-input"
+          className="form-input form-item"
           name="name"
           placeholder="请输入姓名"
           value={form.name}
@@ -86,7 +86,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
         />
 
         <input
-          className="form-input"
+          className="form-input form-item"
           name="phone"
           type="tel"
           placeholder="请输入电话"
@@ -94,7 +94,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           onChange={handleChange}
         />
 
-        <div className="form-row">
+        <div className="form-row form-item">
           <div className="form-select-wrap">
             <select
               className="form-select"
@@ -128,7 +128,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           </div>
         </div>
 
-        <div className="form-select-wrap full">
+        <div className="form-select-wrap full form-item">
           <select
             className="form-select"
             name="dealer"
@@ -142,7 +142,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           <span className="select-arrow" />
         </div>
 
-        <div className="form-model-row">
+        <div className="form-model-row form-item">
           <span className="model-label">购车车系：HR-V</span>
           <span className="model-counter">
             {form.remark.length} / {MAX_REMARK}
@@ -150,7 +150,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
         </div>
 
         {/* 隐私协议（设计稿位于车系行与上传区域之间） */}
-        <label className="privacy-row">
+        <label className="privacy-row form-item">
           <input
             type="checkbox"
             checked={form.agreed}
@@ -169,7 +169,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
 
         {/* 上传区域 */}
         <div
-          className="upload-area"
+          className="upload-area form-item"
           onClick={() => orderInputRef.current?.click()}
         >
           {orderPreview ? (
@@ -191,7 +191,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
         </div>
 
         <div
-          className="upload-area"
+          className="upload-area form-item"
           onClick={() => selfieInputRef.current?.click()}
         >
           {selfiePreview ? (
@@ -214,7 +214,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
 
         {/* 提交按钮 */}
         <button
-          className="submit-btn"
+          className="submit-btn form-item"
           disabled={!form.agreed}
           onClick={handleSubmit}
         >

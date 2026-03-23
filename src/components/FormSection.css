@@ -26,11 +26,36 @@
 .form-body {
   position: relative;
   z-index: 1;
-  /* 顶部内边距：第一个输入框距卡片顶 169/1125=15.02% */
   padding: 15% 13.24% 12%;
   display: flex;
   flex-direction: column;
   gap: 2.4vw;
+}
+
+/* ---- 表单元素滚动入场动画 ---- */
+.form-item {
+  opacity: 0;
+  transform: translateY(4vw);
+  animation: formItemIn 0.5s ease forwards;
+}
+
+/* 依次延迟入场（stagger effect） */
+.form-item:nth-child(1)  { animation-delay: 0.05s; }
+.form-item:nth-child(2)  { animation-delay: 0.1s; }
+.form-item:nth-child(3)  { animation-delay: 0.15s; }
+.form-item:nth-child(4)  { animation-delay: 0.2s; }
+.form-item:nth-child(5)  { animation-delay: 0.25s; }
+.form-item:nth-child(6)  { animation-delay: 0.3s; }
+.form-item:nth-child(7)  { animation-delay: 0.35s; }
+.form-item:nth-child(8)  { animation-delay: 0.4s; }
+.form-item:nth-child(9)  { animation-delay: 0.45s; }
+.form-item:nth-child(10) { animation-delay: 0.5s; }
+
+@keyframes formItemIn {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---- 输入框通用 ---- */
@@ -45,6 +70,12 @@
   background: #fff;
   outline: none;
   box-sizing: border-box;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.form-input:focus {
+  border-color: #c8956c;
+  box-shadow: 0 0 0 0.53vw rgba(200, 149, 108, 0.15);
 }
 
 .form-input::placeholder {
@@ -83,9 +114,14 @@
   appearance: none;
   -webkit-appearance: none;
   box-sizing: border-box;
+  transition: border-color 0.3s, box-shadow 0.3s;
 }
 
-/* placeholder 色 */
+.form-select:focus {
+  border-color: #c8956c;
+  box-shadow: 0 0 0 0.53vw rgba(200, 149, 108, 0.15);
+}
+
 .form-select:has(option[value=""]:checked) {
   color: #b3b3b3;
 }
@@ -101,6 +137,7 @@
   border-right: 1.33vw solid transparent;
   border-top: 1.6vw solid #999;
   pointer-events: none;
+  transition: transform 0.2s;
 }
 
 /* ---- 车系行 ---- */
@@ -147,6 +184,7 @@
   border-radius: 50%;
   flex-shrink: 0;
   position: relative;
+  transition: background 0.2s, border-color 0.2s;
 }
 
 .privacy-row input[type="checkbox"]:checked + .privacy-check {
@@ -176,14 +214,12 @@
 }
 
 /* ---- 上传区域 ---- */
-/* 隐私→上传 间距比常规 gap 更大：63(3x)/1125*100=5.6vw */
 .upload-area:first-of-type {
   margin-top: 3.2vw;
 }
 
 .upload-area {
   width: 100%;
-  /* 设计稿 827 x 228 */
   aspect-ratio: 827 / 228;
   border: 1px dashed #ccc;
   border-radius: 2.67vw;
@@ -193,6 +229,12 @@
   cursor: pointer;
   overflow: hidden;
   background: #fff;
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.upload-area:active {
+  border-color: #c8956c;
+  box-shadow: 0 0 0 0.53vw rgba(200, 149, 108, 0.1);
 }
 
 .upload-icon {
@@ -206,8 +248,9 @@
   object-fit: cover;
 }
 
-/* ---- 提交按钮 ---- */
+/* ---- 提交按钮（微光扫过效果） ---- */
 .submit-btn {
+  position: relative;
   width: 100%;
   height: 9.6vw;
   border: none;
@@ -219,6 +262,28 @@
   letter-spacing: 0.4vw;
   cursor: pointer;
   margin-top: 0.8vw;
+  overflow: hidden;
+}
+
+.submit-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
+  animation: shimmer 3s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { left: -100%; }
+  50% { left: 140%; }
 }
 
 .submit-btn:disabled {
@@ -226,6 +291,11 @@
   cursor: not-allowed;
 }
 
+.submit-btn:disabled::after {
+  animation: none;
+}
+
 .submit-btn:active:not(:disabled) {
-  opacity: 0.85;
+  transform: scale(0.97);
+  transition: transform 0.1s;
 }
