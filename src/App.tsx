@@ -1,4 +1,4 @@
-import { useState, lazy, Suspense } from "react";
+import { useState, useEffect, lazy, Suspense } from "react";
 import FormSection from "./components/FormSection";
 import type { ModalType } from "./components/ResultModal";
 import bgFull from "./assets/bg-full.webp";
@@ -12,6 +12,13 @@ const DEMO_CODE = "ABCD-1234-EFGH-5678-IJKL";
 export default function App() {
   const [modal, setModal] = useState<ModalType | null>(null);
   const [prizeCode, setPrizeCode] = useState("");
+  const [bgLoaded, setBgLoaded] = useState(false);
+
+  useEffect(() => {
+    const img = new Image();
+    img.src = bgFull;
+    img.onload = () => setBgLoaded(true);
+  }, []);
 
   function handleFormSubmit() {
     setModal("reviewing");
@@ -27,7 +34,10 @@ export default function App() {
   }
 
   return (
-    <div className="page" style={{ backgroundImage: `url(${bgFull})` }}>
+    <div
+      className={`page ${bgLoaded ? "page--loaded" : ""}`}
+      style={{ backgroundImage: `url(${bgFull})` }}
+    >
       <div className="hero-spacer" />
 
       <FormSection onSubmit={handleFormSubmit} />

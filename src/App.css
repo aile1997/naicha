@@ -14,6 +14,15 @@
   background-size: 100% auto;
   background-repeat: no-repeat;
   background-position: top center;
+  /* 首屏 blur→清晰渐变 */
+  filter: blur(12px);
+  opacity: 0;
+  transition: filter 0.8s ease-out, opacity 0.6s ease-out;
+}
+
+.page--loaded {
+  filter: blur(0);
+  opacity: 1;
 }
 
 /* 头部占位：让背景图的 hero 部分（花卉+车）完整显示 */

@@ -32,32 +32,6 @@
   gap: 2.4vw;
 }
 
-/* ---- 表单元素滚动入场动画 ---- */
-.form-item {
-  opacity: 0;
-  transform: translateY(4vw);
-  animation: formItemIn 0.5s ease forwards;
-}
-
-/* 依次延迟入场（stagger effect） */
-.form-item:nth-child(1)  { animation-delay: 0.05s; }
-.form-item:nth-child(2)  { animation-delay: 0.1s; }
-.form-item:nth-child(3)  { animation-delay: 0.15s; }
-.form-item:nth-child(4)  { animation-delay: 0.2s; }
-.form-item:nth-child(5)  { animation-delay: 0.25s; }
-.form-item:nth-child(6)  { animation-delay: 0.3s; }
-.form-item:nth-child(7)  { animation-delay: 0.35s; }
-.form-item:nth-child(8)  { animation-delay: 0.4s; }
-.form-item:nth-child(9)  { animation-delay: 0.45s; }
-.form-item:nth-child(10) { animation-delay: 0.5s; }
-
-@keyframes formItemIn {
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 /* ---- 输入框通用 ---- */
 .form-input {
   width: 100%;
