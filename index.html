@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <title>春遇HR-V 花茶皆可赴</title>
+    <style>
+      body { margin: 0; background: #f5ede6; }
+      #loading {
+        position: fixed; inset: 0; z-index: 9999;
+        /* 模拟首屏背景渐变：从花卉粉色区域到表单白色区域 */
+        background: linear-gradient(
+          180deg,
+          #f2ddd0 0%,
+          #f5e5da 25%,
+          #f8ede4 45%,
+          #f5ede6 60%,
+          #f5ede6 100%
+        );
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        transition: opacity 0.5s ease;
+        overflow: hidden;
+      }
+      #loading.hide { opacity: 0; pointer-events: none; }
+      /* 品牌色脉冲圆点 */
+      .loader-dots {
+        display: flex;
+        gap: 8px;
+      }
+      .loader-dots span {
+        width: 8px; height: 8px;
+        border-radius: 50%;
+        background: #c8956c;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+      .loader-dots span:nth-child(2) { animation-delay: 0.2s; }
+      .loader-dots span:nth-child(3) { animation-delay: 0.4s; }
+      @keyframes pulse {
+        0%, 100% { opacity: 0.3; transform: scale(0.8); }
+        50% { opacity: 1; transform: scale(1); }
+      }
+    </style>
+    <script type="module" crossorigin src="./assets/index-sc1dOD8k.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-CIA-NSxi.css">
+  </head>
+  <body>
+    <div id="loading">
+      <div class="loader-dots"><span></span><span></span><span></span></div>
+    </div>
+    <div id="root"></div>
+  </body>
+</html>
