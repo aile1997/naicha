@@ -17,20 +17,28 @@ export default function App() {
   useEffect(() => {
     const img = new Image();
     img.src = bgFull;
-    img.onload = () => setBgLoaded(true);
+    img.onload = () => {
+      setBgLoaded(true);
+      const el = document.getElementById("loading");
+      if (el) el.classList.add("hide");
+      setTimeout(() => el?.remove(), 500);
+    };
   }, []);
 
+  // Demo 链路：提交 → 审核中弹窗
   function handleFormSubmit() {
     setModal("reviewing");
   }
 
-  function handleQuery(phone: string) {
-    console.log("查询电话:", phone);
+  // Demo 链路：查询 → 输入手机号弹窗
+  function handleOpenQuery() {
+    setModal("query");
   }
 
-  function openDemo(type: ModalType) {
-    if (type === "won") setPrizeCode(DEMO_CODE);
-    setModal(type);
+  // Demo 链路：手机号查询 → 中奖弹窗
+  function handleQuery(_phone: string) {
+    setPrizeCode(DEMO_CODE);
+    setModal("won");
   }
 
   return (
@@ -41,7 +49,7 @@ export default function App() {
       >
         <div className="hero-spacer" />
 
-        <FormSection onSubmit={handleFormSubmit} />
+        <FormSection onSubmit={handleFormSubmit} onOpenQuery={handleOpenQuery} />
 
         <img
           className="rules-img"
@@ -49,19 +57,8 @@ export default function App() {
           alt="活动规则"
           loading="lazy"
         />
-
-        {/* 弹窗演示入口（仅开发环境，紧跟活动规则下方） */}
-        {import.meta.env.DEV && (
-          <div className="demo-links">
-            <span onClick={() => openDemo("thanks")}>未中奖</span>
-            <span onClick={() => openDemo("reviewing")}>审核中</span>
-            <span onClick={() => openDemo("won")}>中奖</span>
-            <span onClick={() => openDemo("query")}>查询</span>
-          </div>
-        )}
       </div>
 
-      {/* 弹窗放在 .page 外部，避免 filter 影响 position:fixed */}
       <Suspense>
         {modal && (
           <ResultModal

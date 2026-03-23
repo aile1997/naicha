@@ -41,22 +41,3 @@
   contain-intrinsic-size: 100vw 337vw;
 }
 
-/* ---- 开发环境弹窗演示文字 ---- */
-.demo-links {
-  display: flex;
-  justify-content: center;
-  gap: 5.33vw;
-  padding: 4vw 0 6vw;
-}
-
-.demo-links span {
-  font-size: 3.2vw;
-  color: #999;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 0.5vw;
-}
-
-.demo-links span:active {
-  color: #333;
-}

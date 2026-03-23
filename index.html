@@ -3,9 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <title>奶茶项目</title>
+    <title>春遇HR-V 花茶皆可赴</title>
+    <style>
+      /* 首屏加载占位 —— JS 加载前立即可见，消除白屏 */
+      body { margin: 0; background: #f5ede6; }
+      #loading {
+        position: fixed; inset: 0; z-index: 9999;
+        background: #f5ede6;
+        display: flex; align-items: center; justify-content: center;
+        transition: opacity 0.4s ease;
+      }
+      #loading.hide { opacity: 0; pointer-events: none; }
+      .loader {
+        width: 28px; height: 28px;
+        border: 2.5px solid #e0d5cc;
+        border-top-color: #b8946f;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+      }
+      @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
   </head>
   <body>
+    <div id="loading"><div class="loader"></div></div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -1,0 +1,138 @@
+.picker-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  background: rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.picker-sheet {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  background: #fff;
+  border-radius: 3.2vw 3.2vw 0 0;
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  animation: sheetUp 0.3s ease;
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+
+.picker-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 4vw;
+  height: 12vw;
+  border-bottom: 1px solid #eee;
+}
+
+.picker-cancel,
+.picker-confirm {
+  border: none;
+  background: none;
+  font-size: 3.73vw;
+  padding: 2vw;
+  cursor: pointer;
+}
+
+.picker-cancel {
+  color: #999;
+}
+
+.picker-confirm {
+  color: #c8956c;
+  font-weight: 500;
+}
+
+.picker-title {
+  font-size: 3.73vw;
+  color: #333;
+  font-weight: 500;
+}
+
+.picker-viewport {
+  position: relative;
+  overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.picker-highlight {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  width: 100%;
+  transform: translateY(-50%);
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.picker-track {
+  will-change: transform;
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4vw;
+  color: #999;
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.picker-item.active {
+  color: #1a1a1a;
+  font-weight: 500;
+}
+
+/* 搜索框 */
+.picker-search {
+  padding: 2vw 4vw;
+  border-bottom: 1px solid #eee;
+}
+
+.picker-search-input {
+  width: 100%;
+  height: 9vw;
+  border: 1px solid #e5e5e5;
+  border-radius: 4.5vw;
+  padding: 0 4vw;
+  font-size: 3.47vw;
+  color: #333;
+  background: #f8f8f8;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.picker-search-input:focus {
+  border-color: #c8956c;
+  background: #fff;
+}
+
+.picker-search-input::placeholder {
+  color: #bbb;
+}
+
+/* 空状态 */
+.picker-empty {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 3.73vw;
+  color: #bbb;
+}

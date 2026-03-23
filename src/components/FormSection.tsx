@@ -1,56 +1,76 @@
-import { useState, useRef, type ChangeEvent } from "react";
+import { useState, useRef, useMemo, type ChangeEvent } from "react";
+import Picker from "./Picker";
+import dealerData from "../data/dealers.json";
 import formBg from "../assets/form-bg.webp";
 import uploadIconOrder from "../assets/upload-icon-order.png";
 import uploadIconSelfie from "../assets/upload-icon-selfie.png";
 import "./FormSection.css";
 
 interface FormSectionProps {
-  onSubmit: (data: FormData) => void;
+  onSubmit: () => void;
+  onOpenQuery: () => void;
 }
 
-interface FormData {
+interface FormState {
   name: string;
   phone: string;
   province: string;
   city: string;
   dealer: string;
-  remark: string;
   orderPhoto: File | null;
   selfiePhoto: File | null;
   agreed: boolean;
 }
 
-const PROVINCES = [
-  "北京", "上海", "天津", "重庆", "河北", "山西", "辽宁", "吉林",
-  "黑龙江", "江苏", "浙江", "安徽", "福建", "江西", "山东", "河南",
-  "湖北", "湖南", "广东", "海南", "四川", "贵州", "云南", "陕西",
-  "甘肃", "青海", "台湾", "内蒙古", "广西", "西藏", "宁夏", "新疆", "香港", "澳门",
-];
+const dealers = dealerData as Record<string, Record<string, string[]>>;
+const PROVINCES = Object.keys(dealers).sort();
 
-export default function FormSection({ onSubmit }: FormSectionProps) {
-  const [form, setForm] = useState<FormData>({
+type PickerTarget = "province" | "city" | "dealer" | null;
+
+export default function FormSection({ onSubmit, onOpenQuery }: FormSectionProps) {
+  const [form, setForm] = useState<FormState>({
     name: "",
     phone: "",
     province: "",
     city: "",
     dealer: "",
-    remark: "",
     orderPhoto: null,
     selfiePhoto: null,
     agreed: false,
   });
-  const [orderPreview, setOrderPreview] = useState<string>("");
-  const [selfiePreview, setSelfiePreview] = useState<string>("");
+  const [orderPreview, setOrderPreview] = useState("");
+  const [selfiePreview, setSelfiePreview] = useState("");
+  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
+  const [dealerSearch, setDealerSearch] = useState("");
   const orderInputRef = useRef<HTMLInputElement>(null);
   const selfieInputRef = useRef<HTMLInputElement>(null);
 
-  const MAX_REMARK = 200;
+  // 联动：省份 → 城市列表
+  const cityOptions = useMemo(() => {
+    if (!form.province || !dealers[form.province]) return [];
+    return Object.keys(dealers[form.province]).sort();
+  }, [form.province]);
 
-  function handleChange(
-    e: ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>,
-  ) {
+  // 联动：省份 + 城市 → 经销商列表（支持搜索）
+  const dealerOptions = useMemo(() => {
+    const list: string[] = [];
+    if (form.province && dealers[form.province]) {
+      if (form.city && dealers[form.province][form.city]) {
+        list.push(...dealers[form.province][form.city]);
+      } else {
+        // 未选城市时显示该省所有经销商
+        Object.values(dealers[form.province]).forEach((arr) => list.push(...arr));
+      }
+    }
+    if (dealerSearch) {
+      const kw = dealerSearch.toLowerCase();
+      return list.filter((d) => d.toLowerCase().includes(kw));
+    }
+    return list;
+  }, [form.province, form.city, dealerSearch]);
+
+  function handleChange(e: ChangeEvent<HTMLInputElement>) {
     const { name, value } = e.target;
-    if (name === "remark" && value.length > MAX_REMARK) return;
     setForm((prev) => ({ ...prev, [name]: value }));
   }
 
@@ -69,7 +89,44 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
 
   function handleSubmit() {
     if (!form.agreed) return;
-    onSubmit(form);
+    onSubmit();
+  }
+
+  function openPicker(target: PickerTarget) {
+    if (target === "dealer") setDealerSearch("");
+    setPickerTarget(target);
+  }
+
+  function getPickerOptions(): string[] {
+    if (pickerTarget === "province") return PROVINCES;
+    if (pickerTarget === "city") return cityOptions;
+    if (pickerTarget === "dealer") return dealerOptions;
+    return [];
+  }
+
+  function getPickerTitle(): string {
+    if (pickerTarget === "province") return "选择省份";
+    if (pickerTarget === "city") return "选择城市";
+    if (pickerTarget === "dealer") return "选择经销商";
+    return "";
+  }
+
+  function handlePickerConfirm(value: string) {
+    if (!pickerTarget) return;
+    setForm((prev) => {
+      const next = { ...prev, [pickerTarget]: value };
+      // 省份变更时清空城市和经销商
+      if (pickerTarget === "province" && value !== prev.province) {
+        next.city = "";
+        next.dealer = "";
+      }
+      // 城市变更时清空经销商
+      if (pickerTarget === "city" && value !== prev.city) {
+        next.dealer = "";
+      }
+      return next;
+    });
+    setPickerTarget(null);
   }
 
   return (
@@ -95,61 +152,40 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
         />
 
         <div className="form-row">
-          <div className="form-select-wrap">
-            <select
-              className="form-select"
-              name="province"
-              value={form.province}
-              onChange={handleChange}
-            >
-              <option value="" disabled>
-                请选择省
-              </option>
-              {PROVINCES.map((p) => (
-                <option key={p} value={p}>
-                  {p}
-                </option>
-              ))}
-            </select>
+          <div
+            className="fake-select"
+            onClick={() => openPicker("province")}
+          >
+            <span className={form.province ? "fake-select-value" : "fake-select-placeholder"}>
+              {form.province || "请选择省"}
+            </span>
             <span className="select-arrow" />
           </div>
-          <div className="form-select-wrap">
-            <select
-              className="form-select"
-              name="city"
-              value={form.city}
-              onChange={handleChange}
-            >
-              <option value="" disabled>
-                请选择市
-              </option>
-            </select>
+          <div
+            className="fake-select"
+            onClick={() => openPicker("city")}
+          >
+            <span className={form.city ? "fake-select-value" : "fake-select-placeholder"}>
+              {form.city || "请选择市"}
+            </span>
             <span className="select-arrow" />
           </div>
         </div>
 
-        <div className="form-select-wrap full">
-          <select
-            className="form-select"
-            name="dealer"
-            value={form.dealer}
-            onChange={handleChange}
-          >
-            <option value="" disabled>
-              请选择经销商
-            </option>
-          </select>
+        <div
+          className="fake-select"
+          onClick={() => openPicker("dealer")}
+        >
+          <span className={form.dealer ? "fake-select-value" : "fake-select-placeholder"}>
+            {form.dealer || "请选择经销商"}
+          </span>
           <span className="select-arrow" />
         </div>
 
         <div className="form-model-row">
           <span className="model-label">购车车系：HR-V</span>
-          <span className="model-counter">
-            {form.remark.length} / {MAX_REMARK}
-          </span>
         </div>
 
-        {/* 隐私协议（设计稿位于车系行与上传区域之间） */}
         <label className="privacy-row">
           <input
             type="checkbox"
@@ -167,7 +203,6 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           </span>
         </label>
 
-        {/* 上传区域 */}
         <div
           className="upload-area"
           onClick={() => orderInputRef.current?.click()}
@@ -175,11 +210,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           {orderPreview ? (
             <img className="upload-preview" src={orderPreview} alt="订单照片" />
           ) : (
-            <img
-              className="upload-icon"
-              src={uploadIconOrder}
-              alt="上传4S店门头照片"
-            />
+            <img className="upload-icon" src={uploadIconOrder} alt="上传4S店门头照片" />
           )}
           <input
             ref={orderInputRef}
@@ -197,11 +228,7 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           {selfiePreview ? (
             <img className="upload-preview" src={selfiePreview} alt="合影照片" />
           ) : (
-            <img
-              className="upload-icon"
-              src={uploadIconSelfie}
-              alt="上传本人和HR-V的合影"
-            />
+            <img className="upload-icon" src={uploadIconSelfie} alt="上传本人和HR-V的合影" />
           )}
           <input
             ref={selfieInputRef}
@@ -212,7 +239,6 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
           />
         </div>
 
-        {/* 提交按钮 */}
         <button
           className="submit-btn"
           disabled={!form.agreed}
@@ -220,7 +246,25 @@ export default function FormSection({ onSubmit }: FormSectionProps) {
         >
           提交打卡
         </button>
+
+        {/* 演示入口：查询中奖信息 */}
+        <p className="query-link-row">
+          已提交，点击此处
+          <span className="query-link" onClick={onOpenQuery}>查询中奖信息</span>
+        </p>
       </div>
+
+      <Picker
+        visible={pickerTarget !== null}
+        title={getPickerTitle()}
+        options={getPickerOptions()}
+        value={pickerTarget ? form[pickerTarget] : ""}
+        onConfirm={handlePickerConfirm}
+        onCancel={() => setPickerTarget(null)}
+        searchable={pickerTarget === "dealer"}
+        searchValue={dealerSearch}
+        onSearchChange={setDealerSearch}
+      />
     </section>
   );
 }
