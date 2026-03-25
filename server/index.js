@@ -158,12 +158,14 @@ app.get(`${BASE}/api/query`, (req, res) => {
   if (submission.status === "rejected") {
     return res.json({ found: true, status: "thanks" });
   }
-
-  const winner = queryOne("SELECT prize_code FROM winners WHERE submission_id = ?", [submission.id]);
-  if (winner) {
-    return res.json({ found: true, status: "won", code: winner.prize_code });
+  if (submission.status === "approved") {
+    const winner = queryOne("SELECT prize_code FROM winners WHERE submission_id = ?", [submission.id]);
+    if (winner) {
+      return res.json({ found: true, status: "won", code: winner.prize_code });
+    }
+    return res.json({ found: true, status: "won", code: "" });
   }
-  return res.json({ found: true, status: "thanks" });
+  return res.json({ found: true, status: "reviewing" });
 });
 
 // ==========================================
@@ -214,6 +216,15 @@ app.patch(`${BASE}/api/admin/submissions/:id`, adminAuth, (req, res) => {
   if (row?.c === 0) {
     return res.status(404).json({ error: "未找到该记录" });
   }
+
+  // 审核通过 = 中奖，自动生成兑换码
+  if (status === "approved") {
+    const existing = queryOne("SELECT id FROM winners WHERE submission_id = ?", [Number(id)]);
+    if (!existing) {
+      runWrite("INSERT INTO winners (submission_id, prize_code) VALUES (?, ?)", [Number(id), generateCode()]);
+    }
+  }
+
   res.json({ success: true });
 });
 
@@ -224,39 +235,14 @@ app.post(`${BASE}/api/admin/batch-review`, adminAuth, (req, res) => {
   }
   for (const id of ids) {
     runWrite("UPDATE submissions SET status = ? WHERE id = ?", [status, Number(id)]);
+    if (status === "approved") {
+      const existing = queryOne("SELECT id FROM winners WHERE submission_id = ?", [Number(id)]);
+      if (!existing) {
+        runWrite("INSERT INTO winners (submission_id, prize_code) VALUES (?, ?)", [Number(id), generateCode()]);
+      }
+    }
   }
   res.json({ success: true, updated: ids.length });
-});
-
-app.post(`${BASE}/api/admin/lottery`, adminAuth, (req, res) => {
-  const { count = 5000 } = req.body;
-
-  const approved = queryAll(
-    `SELECT s.id FROM submissions s
-     LEFT JOIN winners w ON w.submission_id = s.id
-     WHERE s.status = 'approved' AND w.id IS NULL`,
-  );
-
-  if (approved.length === 0) {
-    return res.json({ success: false, message: "没有可抽奖的已通过记录" });
-  }
-
-  const pool = approved.map((r) => r.id);
-  for (let i = pool.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [pool[i], pool[j]] = [pool[j], pool[i]];
-  }
-  const selected = pool.slice(0, Math.min(count, pool.length));
-
-  for (const id of selected) {
-    runWrite("INSERT INTO winners (submission_id, prize_code) VALUES (?, ?)", [id, generateCode()]);
-  }
-
-  res.json({
-    success: true,
-    message: `已从 ${approved.length} 条通过记录中抽取 ${selected.length} 名中奖者`,
-    drawn: selected.length,
-  });
 });
 
 app.get(`${BASE}/api/admin/winners`, adminAuth, (req, res) => {
@@ -290,7 +276,9 @@ app.get(`${BASE}/api/admin/stats`, adminAuth, (req, res) => {
   );
 
   const winnersRow = queryOne("SELECT COUNT(*) as count FROM winners");
-  res.json({ ...stats, winners: winnersRow?.count || 0 });
+  const winners = winnersRow?.count || 0;
+  const quota = 5000;
+  res.json({ ...stats, winners, quota, remaining: quota - winners });
 });
 
 // --- 生产模式：serve 前端静态文件 ---

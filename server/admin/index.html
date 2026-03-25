@@ -86,7 +86,6 @@
     <div class="tabs">
       <div class="tab active" data-tab="submissions" onclick="switchTab('submissions')">提交审核</div>
       <div class="tab" data-tab="winners" onclick="switchTab('winners')">中奖名单</div>
-      <div class="tab" data-tab="lottery" onclick="switchTab('lottery')">抽奖</div>
     </div>
 
     <div id="panel-submissions">
@@ -148,18 +147,6 @@
       <div class="pagination" id="winnerPagination"></div>
     </div>
 
-    <div id="panel-lottery" style="display:none;">
-      <div class="lottery-panel">
-        <h3>从已通过的提交中随机抽取中奖者</h3>
-        <p style="color:#999;margin-bottom:16px;">抽奖前请先完成审核，只有状态为"已通过"的记录参与抽奖</p>
-        <div>
-          <input class="lottery-input" id="lotteryCount" type="number" value="5000" min="1">
-          <span style="margin-right:12px;">人</span>
-          <button class="btn btn-lottery" onclick="runLottery()">开始抽奖</button>
-        </div>
-        <div id="lotteryResult"></div>
-      </div>
-    </div>
   </div>
 
   <!-- 图片预览 -->
@@ -189,9 +176,9 @@ async function loadStats() {
   document.getElementById("stats").innerHTML = `
     <div class="stat-card"><div class="num">${s.total || 0}</div><div class="label">总提交</div></div>
     <div class="stat-card pending"><div class="num">${s.pending || 0}</div><div class="label">待审核</div></div>
-    <div class="stat-card approved"><div class="num">${s.approved || 0}</div><div class="label">已通过</div></div>
+    <div class="stat-card approved"><div class="num">${s.winners || 0}</div><div class="label">已通过(中奖)</div></div>
     <div class="stat-card rejected"><div class="num">${s.rejected || 0}</div><div class="label">已拒绝</div></div>
-    <div class="stat-card winners"><div class="num">${s.winners || 0}</div><div class="label">中奖</div></div>
+    <div class="stat-card winners"><div class="num">${s.remaining ?? 0} / ${s.quota || 5000}</div><div class="label">剩余名额</div></div>
   `;
 }
 
@@ -273,20 +260,6 @@ async function batchReview(status) {
   loadStats();
 }
 
-async function runLottery() {
-  const count = parseInt(document.getElementById("lotteryCount").value) || 5000;
-  if (!confirm(`确定要从已通过名单中随机抽取 ${count} 名中奖者？`)) return;
-  const result = await api("/milk_tea/api/admin/lottery", { method: "POST", body: JSON.stringify({ count }) });
-  const el = document.getElementById("lotteryResult");
-  if (result.success) {
-    el.innerHTML = `<div class="lottery-result">${result.message}</div>`;
-    loadStats();
-    loadWinners();
-  } else {
-    el.innerHTML = `<div style="margin-top:16px;color:#ff4d4f;">${result.message}</div>`;
-  }
-}
-
 function toggleAll() {
   const checked = document.getElementById("selectAll").checked;
   document.querySelectorAll(".row-check").forEach(cb => {
@@ -310,7 +283,6 @@ function switchTab(tab) {
   document.querySelector(`.tab[data-tab="${tab}"]`).classList.add("active");
   document.getElementById("panel-submissions").style.display = tab === "submissions" ? "" : "none";
   document.getElementById("panel-winners").style.display = tab === "winners" ? "" : "none";
-  document.getElementById("panel-lottery").style.display = tab === "lottery" ? "" : "none";
   if (tab === "winners") loadWinners();
 }
 
