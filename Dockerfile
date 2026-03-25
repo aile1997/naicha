@@ -1,15 +1,10 @@
 FROM node:18-alpine
 
-# better-sqlite3 需要编译原生模块
-RUN apk add --no-cache python3 make g++
-
 WORKDIR /app
 
-# 复制后端依赖并安装
+# 复制后端依赖并安装（sql.js 是纯 JS，无需编译工具）
 COPY server/package.json ./server/
-RUN cd server && npm install --production && \
-    apk del python3 make g++ && \
-    rm -rf /root/.npm /tmp/*
+RUN cd server && npm install --production && rm -rf /root/.npm /tmp/*
 
 # 复制后端代码和管理后台
 COPY server/index.js ./server/

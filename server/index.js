@@ -1,5 +1,5 @@
 const express = require("express");
-const Database = require("better-sqlite3");
+const initSqlJs = require("sql.js");
 const multer = require("multer");
 const cors = require("cors");
 const path = require("path");
@@ -16,12 +16,14 @@ app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
 app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads"), { maxAge: "7d" }));
 app.use("/admin", express.static(path.join(__dirname, "admin")));
-// /admin 不带尾部斜杠时重定向
 app.get("/admin", (_req, res) => res.redirect("/admin/"));
 
 // --- 文件上传配置 ---
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, "uploads"),
+  destination: uploadsDir,
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname);
     cb(null, `${Date.now()}-${crypto.randomBytes(4).toString("hex")}${ext}`);
@@ -29,38 +31,68 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
-// --- 数据库初始化 ---
+// --- 数据库 ---
 const dbPath = process.env.DB_PATH || path.join(__dirname, "naicha.db");
-const db = new Database(dbPath);
-db.pragma("journal_mode = WAL");
+let db;
 
-db.exec(`
-  CREATE TABLE IF NOT EXISTS submissions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT NOT NULL,
-    phone TEXT NOT NULL,
-    province TEXT NOT NULL,
-    city TEXT NOT NULL,
-    dealer TEXT NOT NULL,
-    order_photo TEXT,
-    selfie_photo TEXT,
-    status TEXT DEFAULT 'pending',
-    created_at TEXT DEFAULT (datetime('now', 'localtime'))
-  );
+// 定期持久化到磁盘（sql.js 是内存数据库，需要手动保存）
+function saveDb() {
+  if (!db) return;
+  const data = db.export();
+  fs.writeFileSync(dbPath, Buffer.from(data));
+}
 
-  CREATE TABLE IF NOT EXISTS winners (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    submission_id INTEGER NOT NULL UNIQUE,
-    prize_code TEXT NOT NULL,
-    created_at TEXT DEFAULT (datetime('now', 'localtime')),
-    FOREIGN KEY (submission_id) REFERENCES submissions(id)
-  );
+// 自动保存间隔（30 秒）
+let saveTimer;
+function scheduleSave() {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => { saveDb(); }, 30000);
+}
 
-  CREATE INDEX IF NOT EXISTS idx_submissions_phone ON submissions(phone);
-  CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status);
-`);
+// 写操作后标记需要保存
+function runWrite(sql, params = []) {
+  const stmt = db.prepare(sql);
+  if (params.length) stmt.bind(params);
+  stmt.step();
+  stmt.free();
+  scheduleSave();
+}
 
-// --- 生成兑换码 ---
+function runWriteGetId(sql, params = []) {
+  runWrite(sql, params);
+  const r = db.exec("SELECT last_insert_rowid() as id");
+  return r[0]?.values[0]?.[0];
+}
+
+function queryOne(sql, params = []) {
+  const stmt = db.prepare(sql);
+  if (params.length) stmt.bind(params);
+  let row = null;
+  if (stmt.step()) {
+    const cols = stmt.getColumnNames();
+    const vals = stmt.get();
+    row = {};
+    cols.forEach((c, i) => { row[c] = vals[i]; });
+  }
+  stmt.free();
+  return row;
+}
+
+function queryAll(sql, params = []) {
+  const stmt = db.prepare(sql);
+  if (params.length) stmt.bind(params);
+  const cols = stmt.getColumnNames();
+  const rows = [];
+  while (stmt.step()) {
+    const vals = stmt.get();
+    const row = {};
+    cols.forEach((c, i) => { row[c] = vals[i]; });
+    rows.push(row);
+  }
+  stmt.free();
+  return rows;
+}
+
 function generateCode() {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const parts = [];
@@ -78,7 +110,6 @@ function generateCode() {
 // 前端 API
 // ==========================================
 
-// 用户提交打卡
 app.post(
   "/api/submit",
   upload.fields([
@@ -91,10 +122,7 @@ app.post(
       return res.status(400).json({ error: "请填写完整信息" });
     }
 
-    // 检查是否已提交
-    const existing = db
-      .prepare("SELECT id FROM submissions WHERE phone = ?")
-      .get(phone);
+    const existing = queryOne("SELECT id FROM submissions WHERE phone = ?", [phone]);
     if (existing) {
       return res.status(409).json({ error: "该手机号已提交过" });
     }
@@ -102,52 +130,36 @@ app.post(
     const orderPhoto = req.files?.orderPhoto?.[0]?.filename || null;
     const selfiePhoto = req.files?.selfiePhoto?.[0]?.filename || null;
 
-    const result = db
-      .prepare(
-        `INSERT INTO submissions (name, phone, province, city, dealer, order_photo, selfie_photo)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(name, phone, province, city, dealer, orderPhoto, selfiePhoto);
+    const id = runWriteGetId(
+      `INSERT INTO submissions (name, phone, province, city, dealer, order_photo, selfie_photo)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [name, phone, province, city, dealer, orderPhoto, selfiePhoto],
+    );
 
-    res.json({ success: true, id: result.lastInsertRowid });
+    res.json({ success: true, id });
   },
 );
 
-// 用户查询中奖信息
 app.get("/api/query", (req, res) => {
   const { phone } = req.query;
   if (!phone) return res.status(400).json({ error: "请输入手机号" });
 
-  const submission = db
-    .prepare("SELECT id, status FROM submissions WHERE phone = ?")
-    .get(phone);
+  const submission = queryOne("SELECT id, status FROM submissions WHERE phone = ?", [phone]);
 
   if (!submission) {
     return res.json({ found: false, message: "未找到提交记录" });
   }
-
   if (submission.status === "pending") {
     return res.json({ found: true, status: "reviewing" });
   }
-
   if (submission.status === "rejected") {
     return res.json({ found: true, status: "thanks" });
   }
 
-  // approved — 检查是否中奖
-  const winner = db
-    .prepare("SELECT prize_code FROM winners WHERE submission_id = ?")
-    .get(submission.id);
-
+  const winner = queryOne("SELECT prize_code FROM winners WHERE submission_id = ?", [submission.id]);
   if (winner) {
-    return res.json({
-      found: true,
-      status: "won",
-      code: winner.prize_code,
-    });
+    return res.json({ found: true, status: "won", code: winner.prize_code });
   }
-
-  // 已通过但未中奖
   return res.json({ found: true, status: "thanks" });
 });
 
@@ -155,7 +167,6 @@ app.get("/api/query", (req, res) => {
 // 管理后台 API
 // ==========================================
 
-// 简单认证中间件（生产环境请用更安全的方案）
 const ADMIN_KEY = process.env.ADMIN_KEY || "naicha2026";
 function adminAuth(req, res, next) {
   const key = req.headers["x-admin-key"] || req.query.key;
@@ -165,7 +176,6 @@ function adminAuth(req, res, next) {
   next();
 }
 
-// 获取提交列表
 app.get("/api/admin/submissions", adminAuth, (req, res) => {
   const { status, page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
@@ -177,20 +187,17 @@ app.get("/api/admin/submissions", adminAuth, (req, res) => {
     params.push(status);
   }
 
-  const total = db
-    .prepare(`SELECT COUNT(*) as count FROM submissions ${where}`)
-    .get(...params).count;
+  const totalRow = queryOne(`SELECT COUNT(*) as count FROM submissions ${where}`, params);
+  const total = totalRow?.count || 0;
 
-  const list = db
-    .prepare(
-      `SELECT * FROM submissions ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
-    )
-    .all(...params, Number(limit), Number(offset));
+  const list = queryAll(
+    `SELECT * FROM submissions ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
+    [...params, Number(limit), Number(offset)],
+  );
 
   res.json({ total, page: Number(page), limit: Number(limit), list });
 });
 
-// 审核（通过/拒绝）
 app.patch("/api/admin/submissions/:id", adminAuth, (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
@@ -199,51 +206,38 @@ app.patch("/api/admin/submissions/:id", adminAuth, (req, res) => {
     return res.status(400).json({ error: "status 必须为 approved 或 rejected" });
   }
 
-  const result = db
-    .prepare("UPDATE submissions SET status = ? WHERE id = ?")
-    .run(status, id);
-
-  if (result.changes === 0) {
+  runWrite("UPDATE submissions SET status = ? WHERE id = ?", [status, Number(id)]);
+  const row = queryOne("SELECT changes() as c");
+  if (row?.c === 0) {
     return res.status(404).json({ error: "未找到该记录" });
   }
-
   res.json({ success: true });
 });
 
-// 批量审核
 app.post("/api/admin/batch-review", adminAuth, (req, res) => {
   const { ids, status } = req.body;
   if (!ids?.length || !["approved", "rejected"].includes(status)) {
     return res.status(400).json({ error: "参数错误" });
   }
-
-  const stmt = db.prepare("UPDATE submissions SET status = ? WHERE id = ?");
-  const batch = db.transaction((ids) => {
-    for (const id of ids) stmt.run(status, id);
-  });
-  batch(ids);
-
+  for (const id of ids) {
+    runWrite("UPDATE submissions SET status = ? WHERE id = ?", [status, Number(id)]);
+  }
   res.json({ success: true, updated: ids.length });
 });
 
-// 抽奖：从已通过的名单中随机选取 N 个中奖者
 app.post("/api/admin/lottery", adminAuth, (req, res) => {
   const { count = 5000 } = req.body;
 
-  // 已有中奖者不重复抽
-  const approved = db
-    .prepare(
-      `SELECT s.id FROM submissions s
-       LEFT JOIN winners w ON w.submission_id = s.id
-       WHERE s.status = 'approved' AND w.id IS NULL`,
-    )
-    .all();
+  const approved = queryAll(
+    `SELECT s.id FROM submissions s
+     LEFT JOIN winners w ON w.submission_id = s.id
+     WHERE s.status = 'approved' AND w.id IS NULL`,
+  );
 
   if (approved.length === 0) {
     return res.json({ success: false, message: "没有可抽奖的已通过记录" });
   }
 
-  // Fisher-Yates 洗牌，取前 count 个
   const pool = approved.map((r) => r.id);
   for (let i = pool.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -251,16 +245,9 @@ app.post("/api/admin/lottery", adminAuth, (req, res) => {
   }
   const selected = pool.slice(0, Math.min(count, pool.length));
 
-  // 写入中奖表
-  const stmt = db.prepare(
-    "INSERT INTO winners (submission_id, prize_code) VALUES (?, ?)",
-  );
-  const batch = db.transaction((ids) => {
-    for (const id of ids) {
-      stmt.run(id, generateCode());
-    }
-  });
-  batch(selected);
+  for (const id of selected) {
+    runWrite("INSERT INTO winners (submission_id, prize_code) VALUES (?, ?)", [id, generateCode()]);
+  }
 
   res.json({
     success: true,
@@ -269,52 +256,43 @@ app.post("/api/admin/lottery", adminAuth, (req, res) => {
   });
 });
 
-// 查看中奖名单
 app.get("/api/admin/winners", adminAuth, (req, res) => {
   const { page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
 
-  const total = db
-    .prepare("SELECT COUNT(*) as count FROM winners")
-    .get().count;
+  const totalRow = queryOne("SELECT COUNT(*) as count FROM winners");
+  const total = totalRow?.count || 0;
 
-  const list = db
-    .prepare(
-      `SELECT w.id, w.prize_code, w.created_at as won_at,
-              s.name, s.phone, s.province, s.city, s.dealer
-       FROM winners w
-       JOIN submissions s ON s.id = w.submission_id
-       ORDER BY w.created_at DESC
-       LIMIT ? OFFSET ?`,
-    )
-    .all(Number(limit), Number(offset));
+  const list = queryAll(
+    `SELECT w.id, w.prize_code, w.created_at as won_at,
+            s.name, s.phone, s.province, s.city, s.dealer
+     FROM winners w
+     JOIN submissions s ON s.id = w.submission_id
+     ORDER BY w.created_at DESC
+     LIMIT ? OFFSET ?`,
+    [Number(limit), Number(offset)],
+  );
 
   res.json({ total, page: Number(page), limit: Number(limit), list });
 });
 
-// 统计
 app.get("/api/admin/stats", adminAuth, (req, res) => {
-  const stats = db
-    .prepare(
-      `SELECT
-        COUNT(*) as total,
-        SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
-        SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
-        SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
-       FROM submissions`,
-    )
-    .get();
+  const stats = queryOne(
+    `SELECT
+      COUNT(*) as total,
+      SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending,
+      SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved,
+      SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected
+     FROM submissions`,
+  );
 
-  const winners = db
-    .prepare("SELECT COUNT(*) as count FROM winners")
-    .get().count;
-
-  res.json({ ...stats, winners });
+  const winnersRow = queryOne("SELECT COUNT(*) as count FROM winners");
+  res.json({ ...stats, winners: winnersRow?.count || 0 });
 });
 
 // --- 生产模式：serve 前端静态文件 ---
 const distPath = path.join(__dirname, "..", "dist");
-if (require("fs").existsSync(distPath)) {
+if (fs.existsSync(distPath)) {
   app.use(express.static(distPath, { maxAge: "30d", immutable: true }));
   app.get("/{*path}", (req, res, next) => {
     if (req.path.startsWith("/api") || req.path.startsWith("/admin") || req.path.startsWith("/uploads")) {
@@ -331,11 +309,63 @@ app.use((err, _req, res, _next) => {
 });
 
 // --- 优雅关闭 ---
-process.on("SIGTERM", () => { db.close(); process.exit(0); });
-process.on("SIGINT", () => { db.close(); process.exit(0); });
+function shutdown() {
+  saveDb();
+  if (db) db.close();
+  process.exit(0);
+}
+process.on("SIGTERM", shutdown);
+process.on("SIGINT", shutdown);
 
 // --- 启动 ---
-app.listen(PORT, HOST, () => {
-  console.log(`服务运行在 http://${HOST}:${PORT}`);
-  console.log(`管理后台: http://${HOST}:${PORT}/admin/`);
+async function main() {
+  const SQL = await initSqlJs();
+
+  // 加载已有数据库或创建新的
+  if (fs.existsSync(dbPath)) {
+    const buf = fs.readFileSync(dbPath);
+    db = new SQL.Database(buf);
+  } else {
+    db = new SQL.Database();
+  }
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS submissions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      province TEXT NOT NULL,
+      city TEXT NOT NULL,
+      dealer TEXT NOT NULL,
+      order_photo TEXT,
+      selfie_photo TEXT,
+      status TEXT DEFAULT 'pending',
+      created_at TEXT DEFAULT (datetime('now', 'localtime'))
+    );
+
+    CREATE TABLE IF NOT EXISTS winners (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      submission_id INTEGER NOT NULL UNIQUE,
+      prize_code TEXT NOT NULL,
+      created_at TEXT DEFAULT (datetime('now', 'localtime')),
+      FOREIGN KEY (submission_id) REFERENCES submissions(id)
+    );
+  `);
+
+  // 确保索引存在
+  try { db.run("CREATE INDEX IF NOT EXISTS idx_submissions_phone ON submissions(phone)"); } catch {}
+  try { db.run("CREATE INDEX IF NOT EXISTS idx_submissions_status ON submissions(status)"); } catch {}
+
+  // 初始保存
+  saveDb();
+
+  app.listen(PORT, HOST, () => {
+    console.log(`服务运行在 http://${HOST}:${PORT}`);
+    console.log(`管理后台: http://${HOST}:${PORT}/admin/`);
+  });
+}
+
+main().catch((err) => {
+  console.error("启动失败:", err);
+  process.exit(1);
 });

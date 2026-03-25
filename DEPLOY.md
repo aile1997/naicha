@@ -34,6 +34,19 @@ docker run -d \
 
 数据库和上传文件通过 Docker Volume 持久化，容器重建不会丢失数据。
 
+### 常见问题：私有镜像构建失败
+
+如果服务器无法拉取 Docker Hub 镜像，需要用内部私有镜像，只需修改 Dockerfile 第一行：
+
+```dockerfile
+# 将
+FROM node:18-alpine
+# 改为你们的私有镜像，例如：
+FROM private-registry.sohucs.com/domeos-pub/node:18.1.0-alpine
+```
+
+**其余内容不要改**，第 4 行的 `RUN apk add --no-cache python3 make g++` 会自动安装 `better-sqlite3` 编译所需的工具（python3、make、g++），这是构建成功的关键。
+
 ---
 
 ## 本地部署（无 Docker）
