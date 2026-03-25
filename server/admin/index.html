@@ -180,6 +180,7 @@ async function api(path, opts = {}) {
   const sep = path.includes("?") ? "&" : "?";
   const url = `${BASE}${path}${sep}key=${key()}`;
   const res = await fetch(url, { ...opts, headers: headers() });
+  if (res.status === 401) throw new Error("密钥错误");
   return res.json();
 }
 
@@ -313,13 +314,15 @@ function switchTab(tab) {
   if (tab === "winners") loadWinners();
 }
 
-function loadAll() {
-  loadStats();
-  loadSubmissions();
+async function loadAll() {
+  if (!key()) { alert("请输入管理密钥"); return; }
+  try {
+    await loadStats();
+    await loadSubmissions();
+  } catch (e) {
+    alert(e.message || "登录失败");
+  }
 }
-
-// 初始加载
-loadAll();
 </script>
 </body>
 </html>
