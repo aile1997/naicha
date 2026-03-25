@@ -1,5 +1,43 @@
 # 奶茶抽奖活动 — 部署文档
 
+## Docker 部署（推荐）
+
+### 方式 A：docker-compose（最简单）
+
+```bash
+# 上传整个项目目录到服务器后
+docker-compose up -d
+```
+
+### 方式 B：手动 docker build
+
+```bash
+docker build -t naicha .
+docker run -d \
+  --name naicha \
+  -p 3001:3001 \
+  -v naicha-uploads:/app/server/uploads \
+  -v naicha-data:/app/server/data \
+  -e ADMIN_KEY=naicha2026 \
+  -e DB_PATH=/app/server/data/naicha.db \
+  --restart unless-stopped \
+  naicha
+```
+
+### 访问
+
+- 活动页：`http://IP:3001`
+- 管理后台：`http://IP:3001/admin/`
+- 管理密钥：`naicha2026`
+
+### 数据持久化
+
+数据库和上传文件通过 Docker Volume 持久化，容器重建不会丢失数据。
+
+---
+
+## 本地部署（无 Docker）
+
 ## 目录结构
 
 ```

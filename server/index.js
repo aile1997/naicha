@@ -30,7 +30,8 @@ const storage = multer.diskStorage({
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 // --- 数据库初始化 ---
-const db = new Database(path.join(__dirname, "naicha.db"));
+const dbPath = process.env.DB_PATH || path.join(__dirname, "naicha.db");
+const db = new Database(dbPath);
 db.pragma("journal_mode = WAL");
 
 db.exec(`

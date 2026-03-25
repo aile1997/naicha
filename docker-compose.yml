@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  naicha:
+    build: .
+    ports:
+      - "3001:3001"
+    volumes:
+      - naicha-uploads:/app/server/uploads
+      - naicha-data:/app/server/data
+    environment:
+      - PORT=3001
+      - HOST=0.0.0.0
+      - ADMIN_KEY=naicha2026
+      - DB_PATH=/app/server/data/naicha.db
+    restart: unless-stopped
+
+volumes:
+  naicha-uploads:
+  naicha-data:

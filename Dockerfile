@@ -1,0 +1,30 @@
+FROM node:18-alpine
+
+WORKDIR /app
+
+# 复制后端依赖并安装
+COPY deploy/server/package.json ./server/
+RUN cd server && npm install --production
+
+# 复制后端代码和管理后台
+COPY deploy/server/index.js ./server/
+COPY deploy/server/admin/ ./server/admin/
+
+# 复制前端构建产物
+COPY deploy/dist/ ./dist/
+
+# 创建上传目录和数据目录
+RUN mkdir -p server/uploads server/data
+
+# 环境变量
+ENV PORT=3001
+ENV HOST=0.0.0.0
+ENV NODE_ENV=production
+
+EXPOSE 3001
+
+# 数据持久化挂载点
+VOLUME ["/app/server/uploads", "/app/server/data"]
+
+WORKDIR /app/server
+CMD ["node", "index.js"]
