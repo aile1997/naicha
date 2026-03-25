@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>奶茶活动 - 管理后台</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; background: #f5f5f5; color: #333; }
+    .header { background: #1a1a1a; color: #fff; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center; }
+    .header h1 { font-size: 18px; font-weight: 500; }
+    .header .key-input { display: flex; gap: 8px; align-items: center; }
+    .header input { padding: 6px 12px; border: 1px solid #555; border-radius: 4px; background: #333; color: #fff; font-size: 13px; width: 160px; }
+    .header button { padding: 6px 16px; border: none; border-radius: 4px; background: #c8956c; color: #fff; cursor: pointer; font-size: 13px; }
+    .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+
+    /* 统计卡片 */
+    .stats { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-bottom: 20px; }
+    .stat-card { background: #fff; border-radius: 8px; padding: 16px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .stat-card .num { font-size: 28px; font-weight: 600; color: #1a1a1a; }
+    .stat-card .label { font-size: 13px; color: #999; margin-top: 4px; }
+    .stat-card.pending .num { color: #fa8c16; }
+    .stat-card.approved .num { color: #52c41a; }
+    .stat-card.rejected .num { color: #ff4d4f; }
+    .stat-card.winners .num { color: #c8956c; }
+
+    /* 标签页 */
+    .tabs { display: flex; gap: 0; margin-bottom: 16px; background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .tab { padding: 12px 24px; cursor: pointer; font-size: 14px; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab:hover { background: #fafafa; }
+    .tab.active { border-bottom-color: #c8956c; color: #c8956c; font-weight: 500; }
+
+    /* 工具栏 */
+    .toolbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+    .toolbar .actions { display: flex; gap: 8px; }
+    .btn { padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; transition: opacity 0.2s; }
+    .btn:hover { opacity: 0.85; }
+    .btn-approve { background: #52c41a; color: #fff; }
+    .btn-reject { background: #ff4d4f; color: #fff; }
+    .btn-lottery { background: #c8956c; color: #fff; font-size: 14px; padding: 10px 24px; }
+    .btn-export { background: #1890ff; color: #fff; }
+
+    /* 表格 */
+    .table-wrap { background: #fff; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { background: #fafafa; padding: 10px 12px; text-align: left; font-weight: 500; color: #666; border-bottom: 1px solid #eee; }
+    td { padding: 10px 12px; border-bottom: 1px solid #f0f0f0; }
+    tr:hover td { background: #fafafa; }
+    .status-badge { padding: 2px 8px; border-radius: 10px; font-size: 12px; }
+    .status-pending { background: #fff7e6; color: #fa8c16; }
+    .status-approved { background: #f6ffed; color: #52c41a; }
+    .status-rejected { background: #fff2f0; color: #ff4d4f; }
+    .photo-thumb { width: 40px; height: 40px; object-fit: cover; border-radius: 4px; cursor: pointer; }
+    .checkbox { width: 16px; height: 16px; cursor: pointer; }
+
+    /* 分页 */
+    .pagination { display: flex; justify-content: center; align-items: center; gap: 8px; padding: 16px; }
+    .pagination button { padding: 6px 12px; border: 1px solid #d9d9d9; border-radius: 4px; background: #fff; cursor: pointer; font-size: 13px; }
+    .pagination button.active { border-color: #c8956c; color: #c8956c; }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* 抽奖面板 */
+    .lottery-panel { background: #fff; border-radius: 8px; padding: 24px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .lottery-panel h3 { margin-bottom: 16px; }
+    .lottery-input { padding: 8px 16px; border: 1px solid #d9d9d9; border-radius: 4px; font-size: 16px; width: 120px; text-align: center; margin-right: 12px; }
+    .lottery-result { margin-top: 16px; padding: 12px; background: #f6ffed; border-radius: 4px; color: #52c41a; }
+
+    /* 图片预览 */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 100; align-items: center; justify-content: center; }
+    .overlay.show { display: flex; }
+    .overlay img { max-width: 90vw; max-height: 90vh; border-radius: 8px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>春遇 HR-V 花茶皆可赴 - 管理后台</h1>
+    <div class="key-input">
+      <input id="adminKey" type="password" placeholder="管理密钥" value="naicha2026">
+      <button onclick="loadAll()">登录</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="stats" id="stats"></div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="submissions" onclick="switchTab('submissions')">提交审核</div>
+      <div class="tab" data-tab="winners" onclick="switchTab('winners')">中奖名单</div>
+      <div class="tab" data-tab="lottery" onclick="switchTab('lottery')">抽奖</div>
+    </div>
+
+    <div id="panel-submissions">
+      <div class="toolbar">
+        <div class="actions">
+          <select id="statusFilter" onchange="loadSubmissions()" style="padding:6px 12px;border:1px solid #d9d9d9;border-radius:4px;">
+            <option value="all">全部</option>
+            <option value="pending" selected>待审核</option>
+            <option value="approved">已通过</option>
+            <option value="rejected">已拒绝</option>
+          </select>
+          <button class="btn btn-approve" onclick="batchReview('approved')">批量通过</button>
+          <button class="btn btn-reject" onclick="batchReview('rejected')">批量拒绝</button>
+        </div>
+        <span id="totalInfo" style="color:#999;font-size:13px;"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th><input type="checkbox" class="checkbox" id="selectAll" onchange="toggleAll()"></th>
+              <th>ID</th>
+              <th>姓名</th>
+              <th>手机号</th>
+              <th>省份</th>
+              <th>城市</th>
+              <th>经销商</th>
+              <th>门头照</th>
+              <th>合影</th>
+              <th>状态</th>
+              <th>提交时间</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="submissionList"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="pagination"></div>
+    </div>
+
+    <div id="panel-winners" style="display:none;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>姓名</th>
+              <th>手机号</th>
+              <th>省份</th>
+              <th>城市</th>
+              <th>经销商</th>
+              <th>兑换码</th>
+              <th>中奖时间</th>
+            </tr>
+          </thead>
+          <tbody id="winnerList"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="winnerPagination"></div>
+    </div>
+
+    <div id="panel-lottery" style="display:none;">
+      <div class="lottery-panel">
+        <h3>从已通过的提交中随机抽取中奖者</h3>
+        <p style="color:#999;margin-bottom:16px;">抽奖前请先完成审核，只有状态为"已通过"的记录参与抽奖</p>
+        <div>
+          <input class="lottery-input" id="lotteryCount" type="number" value="5000" min="1">
+          <span style="margin-right:12px;">人</span>
+          <button class="btn btn-lottery" onclick="runLottery()">开始抽奖</button>
+        </div>
+        <div id="lotteryResult"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 图片预览 -->
+  <div class="overlay" id="overlay" onclick="this.classList.remove('show')">
+    <img id="previewImg" src="">
+  </div>
+
+<script>
+const BASE = location.origin;
+let currentPage = 1;
+let winnerPage = 1;
+let selectedIds = new Set();
+
+function key() { return document.getElementById("adminKey").value; }
+function headers() { return { "x-admin-key": key(), "Content-Type": "application/json" }; }
+
+async function api(path, opts = {}) {
+  const sep = path.includes("?") ? "&" : "?";
+  const url = `${BASE}${path}${sep}key=${key()}`;
+  const res = await fetch(url, { ...opts, headers: headers() });
+  return res.json();
+}
+
+async function loadStats() {
+  const s = await api("/milk_tea/api/admin/stats");
+  document.getElementById("stats").innerHTML = `
+    <div class="stat-card"><div class="num">${s.total || 0}</div><div class="label">总提交</div></div>
+    <div class="stat-card pending"><div class="num">${s.pending || 0}</div><div class="label">待审核</div></div>
+    <div class="stat-card approved"><div class="num">${s.approved || 0}</div><div class="label">已通过</div></div>
+    <div class="stat-card rejected"><div class="num">${s.rejected || 0}</div><div class="label">已拒绝</div></div>
+    <div class="stat-card winners"><div class="num">${s.winners || 0}</div><div class="label">中奖</div></div>
+  `;
+}
+
+async function loadSubmissions(page = 1) {
+  currentPage = page;
+  selectedIds.clear();
+  document.getElementById("selectAll").checked = false;
+  const status = document.getElementById("statusFilter").value;
+  const data = await api(`/milk_tea/api/admin/submissions?status=${status}&page=${page}&limit=20`);
+  document.getElementById("totalInfo").textContent = `共 ${data.total} 条`;
+
+  const tbody = document.getElementById("submissionList");
+  tbody.innerHTML = data.list.map(r => `
+    <tr>
+      <td><input type="checkbox" class="checkbox row-check" value="${r.id}" onchange="toggleRow(${r.id}, this.checked)"></td>
+      <td>${r.id}</td>
+      <td>${r.name}</td>
+      <td>${r.phone}</td>
+      <td>${r.province}</td>
+      <td>${r.city}</td>
+      <td title="${r.dealer}">${r.dealer.length > 12 ? r.dealer.slice(0, 12) + "..." : r.dealer}</td>
+      <td>${r.order_photo ? `<img class="photo-thumb" src="/uploads/${r.order_photo}" onclick="preview('/uploads/${r.order_photo}')">` : "-"}</td>
+      <td>${r.selfie_photo ? `<img class="photo-thumb" src="/uploads/${r.selfie_photo}" onclick="preview('/uploads/${r.selfie_photo}')">` : "-"}</td>
+      <td><span class="status-badge status-${r.status}">${{pending:"待审核",approved:"已通过",rejected:"已拒绝"}[r.status]}</span></td>
+      <td>${r.created_at}</td>
+      <td>
+        ${r.status === "pending" ? `
+          <button class="btn btn-approve" style="padding:4px 8px;font-size:12px;" onclick="review(${r.id},'approved')">通过</button>
+          <button class="btn btn-reject" style="padding:4px 8px;font-size:12px;" onclick="review(${r.id},'rejected')">拒绝</button>
+        ` : "-"}
+      </td>
+    </tr>
+  `).join("");
+
+  // 分页
+  const totalPages = Math.ceil(data.total / 20);
+  const pag = document.getElementById("pagination");
+  let html = `<button ${page <= 1 ? "disabled" : ""} onclick="loadSubmissions(${page - 1})">上一页</button>`;
+  html += `<span>第 ${page} / ${totalPages} 页</span>`;
+  html += `<button ${page >= totalPages ? "disabled" : ""} onclick="loadSubmissions(${page + 1})">下一页</button>`;
+  pag.innerHTML = html;
+}
+
+async function loadWinners(page = 1) {
+  winnerPage = page;
+  const data = await api(`/milk_tea/api/admin/winners?page=${page}&limit=20`);
+  document.getElementById("winnerList").innerHTML = data.list.map(r => `
+    <tr>
+      <td>${r.id}</td>
+      <td>${r.name}</td>
+      <td>${r.phone}</td>
+      <td>${r.province}</td>
+      <td>${r.city}</td>
+      <td>${r.dealer}</td>
+      <td style="font-family:monospace;color:#c8956c;font-weight:500;">${r.prize_code}</td>
+      <td>${r.won_at}</td>
+    </tr>
+  `).join("");
+
+  const totalPages = Math.ceil(data.total / 20);
+  const pag = document.getElementById("winnerPagination");
+  let html = `<button ${page <= 1 ? "disabled" : ""} onclick="loadWinners(${page - 1})">上一页</button>`;
+  html += `<span>第 ${page} / ${totalPages} 页</span>`;
+  html += `<button ${page >= totalPages ? "disabled" : ""} onclick="loadWinners(${page + 1})">下一页</button>`;
+  pag.innerHTML = html;
+}
+
+async function review(id, status) {
+  await api(`/milk_tea/api/admin/submissions/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+  loadSubmissions(currentPage);
+  loadStats();
+}
+
+async function batchReview(status) {
+  if (selectedIds.size === 0) return alert("请先勾选要操作的记录");
+  if (!confirm(`确定要${status === "approved" ? "通过" : "拒绝"}选中的 ${selectedIds.size} 条记录？`)) return;
+  await api("/milk_tea/api/admin/batch-review", { method: "POST", body: JSON.stringify({ ids: [...selectedIds], status }) });
+  loadSubmissions(currentPage);
+  loadStats();
+}
+
+async function runLottery() {
+  const count = parseInt(document.getElementById("lotteryCount").value) || 5000;
+  if (!confirm(`确定要从已通过名单中随机抽取 ${count} 名中奖者？`)) return;
+  const result = await api("/milk_tea/api/admin/lottery", { method: "POST", body: JSON.stringify({ count }) });
+  const el = document.getElementById("lotteryResult");
+  if (result.success) {
+    el.innerHTML = `<div class="lottery-result">${result.message}</div>`;
+    loadStats();
+    loadWinners();
+  } else {
+    el.innerHTML = `<div style="margin-top:16px;color:#ff4d4f;">${result.message}</div>`;
+  }
+}
+
+function toggleAll() {
+  const checked = document.getElementById("selectAll").checked;
+  document.querySelectorAll(".row-check").forEach(cb => {
+    cb.checked = checked;
+    toggleRow(parseInt(cb.value), checked);
+  });
+}
+
+function toggleRow(id, checked) {
+  if (checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+}
+
+function preview(src) {
+  document.getElementById("previewImg").src = src;
+  document.getElementById("overlay").classList.add("show");
+}
+
+function switchTab(tab) {
+  document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+  document.querySelector(`.tab[data-tab="${tab}"]`).classList.add("active");
+  document.getElementById("panel-submissions").style.display = tab === "submissions" ? "" : "none";
+  document.getElementById("panel-winners").style.display = tab === "winners" ? "" : "none";
+  document.getElementById("panel-lottery").style.display = tab === "lottery" ? "" : "none";
+  if (tab === "winners") loadWinners();
+}
+
+function loadAll() {
+  loadStats();
+  loadSubmissions();
+}
+
+// 初始加载
+loadAll();
+</script>
+</body>
+</html>

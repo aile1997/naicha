@@ -7,7 +7,7 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:3001',
+      '/milk_tea/api': 'http://localhost:3001',
     },
   },
 })

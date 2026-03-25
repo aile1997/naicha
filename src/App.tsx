@@ -7,7 +7,27 @@ import "./App.css";
 
 const ResultModal = lazy(() => import("./components/ResultModal"));
 
-const DEMO_CODE = "ABCD-1234-EFGH-5678-IJKL";
+// 活动时间：3月28日-4月6日，每日 9:00-18:00（北京时间 UTC+8）
+function isActivityOpen(): boolean {
+  // 获取北京时间
+  const now = new Date();
+  const utc = now.getTime() + now.getTimezoneOffset() * 60000;
+  const beijing = new Date(utc + 8 * 3600000);
+
+  const year = beijing.getFullYear();
+  const month = beijing.getMonth() + 1; // 1-indexed
+  const day = beijing.getDate();
+  const hour = beijing.getHours();
+
+  // 日期范围：2026年3月28日 ~ 2026年4月6日
+  const dateNum = year * 10000 + month * 100 + day;
+  if (dateNum < 20260328 || dateNum > 20260406) return false;
+
+  // 时间范围：9:00 ~ 18:00
+  if (hour < 9 || hour >= 18) return false;
+
+  return true;
+}
 
 export default function App() {
   const [modal, setModal] = useState<ModalType | null>(null);
@@ -22,23 +42,43 @@ export default function App() {
       const el = document.getElementById("loading");
       if (el) el.classList.add("hide");
       setTimeout(() => el?.remove(), 500);
+
     };
   }, []);
 
-  // Demo 链路：提交 → 审核中弹窗
   function handleFormSubmit() {
+    if (!isActivityOpen()) {
+      setModal("closed");
+      return;
+    }
     setModal("reviewing");
   }
 
-  // Demo 链路：查询 → 输入手机号弹窗
   function handleOpenQuery() {
     setModal("query");
   }
 
-  // Demo 链路：手机号查询 → 中奖弹窗
-  function handleQuery(_phone: string) {
-    setPrizeCode(DEMO_CODE);
-    setModal("won");
+  async function handleQuery(phone: string) {
+    try {
+      const res = await fetch(`/milk_tea/api/query?phone=${encodeURIComponent(phone)}`);
+      const data = await res.json();
+
+      if (!data.found) {
+        alert("未找到提交记录，请确认手机号是否正确");
+        return;
+      }
+
+      if (data.status === "won") {
+        setPrizeCode(data.code);
+      }
+      setModal(data.status as ModalType);
+    } catch {
+      alert("查询失败，请稍后重试");
+    }
+  }
+
+  function handleClose() {
+    setModal(null);
   }
 
   return (
@@ -64,7 +104,7 @@ export default function App() {
           <ResultModal
             type={modal}
             code={prizeCode}
-            onClose={() => setModal(null)}
+            onClose={handleClose}
             onQuery={handleQuery}
           />
         )}

@@ -14,9 +14,12 @@ const HOST = process.env.HOST || "0.0.0.0";
 app.set("trust proxy", 1);
 app.use(cors({ origin: process.env.CORS_ORIGIN || true }));
 app.use(express.json());
-app.use("/uploads", express.static(path.join(__dirname, "uploads"), { maxAge: "7d" }));
-app.use("/admin", express.static(path.join(__dirname, "admin")));
-app.get("/admin", (_req, res) => res.redirect("/admin/"));
+// 路径前缀（nginx 反代 /milk_tea → 后端）
+const BASE = process.env.BASE_PATH || "/milk_tea";
+
+app.use(`${BASE}/uploads`, express.static(path.join(__dirname, "uploads"), { maxAge: "7d" }));
+app.use(`${BASE}/admin`, express.static(path.join(__dirname, "admin")));
+app.get(`${BASE}/admin`, (_req, res) => res.redirect(`${BASE}/admin/`));
 
 // --- 文件上传配置 ---
 const uploadsDir = path.join(__dirname, "uploads");
@@ -111,7 +114,7 @@ function generateCode() {
 // ==========================================
 
 app.post(
-  "/api/submit",
+  `${BASE}/api/submit`,
   upload.fields([
     { name: "orderPhoto", maxCount: 1 },
     { name: "selfiePhoto", maxCount: 1 },
@@ -140,7 +143,7 @@ app.post(
   },
 );
 
-app.get("/api/query", (req, res) => {
+app.get(`${BASE}/api/query`, (req, res) => {
   const { phone } = req.query;
   if (!phone) return res.status(400).json({ error: "请输入手机号" });
 
@@ -176,7 +179,7 @@ function adminAuth(req, res, next) {
   next();
 }
 
-app.get("/api/admin/submissions", adminAuth, (req, res) => {
+app.get(`${BASE}/api/admin/submissions`, adminAuth, (req, res) => {
   const { status, page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
 
@@ -198,7 +201,7 @@ app.get("/api/admin/submissions", adminAuth, (req, res) => {
   res.json({ total, page: Number(page), limit: Number(limit), list });
 });
 
-app.patch("/api/admin/submissions/:id", adminAuth, (req, res) => {
+app.patch(`${BASE}/api/admin/submissions/:id`, adminAuth, (req, res) => {
   const { id } = req.params;
   const { status } = req.body;
 
@@ -214,7 +217,7 @@ app.patch("/api/admin/submissions/:id", adminAuth, (req, res) => {
   res.json({ success: true });
 });
 
-app.post("/api/admin/batch-review", adminAuth, (req, res) => {
+app.post(`${BASE}/api/admin/batch-review`, adminAuth, (req, res) => {
   const { ids, status } = req.body;
   if (!ids?.length || !["approved", "rejected"].includes(status)) {
     return res.status(400).json({ error: "参数错误" });
@@ -225,7 +228,7 @@ app.post("/api/admin/batch-review", adminAuth, (req, res) => {
   res.json({ success: true, updated: ids.length });
 });
 
-app.post("/api/admin/lottery", adminAuth, (req, res) => {
+app.post(`${BASE}/api/admin/lottery`, adminAuth, (req, res) => {
   const { count = 5000 } = req.body;
 
   const approved = queryAll(
@@ -256,7 +259,7 @@ app.post("/api/admin/lottery", adminAuth, (req, res) => {
   });
 });
 
-app.get("/api/admin/winners", adminAuth, (req, res) => {
+app.get(`${BASE}/api/admin/winners`, adminAuth, (req, res) => {
   const { page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
 
@@ -276,7 +279,7 @@ app.get("/api/admin/winners", adminAuth, (req, res) => {
   res.json({ total, page: Number(page), limit: Number(limit), list });
 });
 
-app.get("/api/admin/stats", adminAuth, (req, res) => {
+app.get(`${BASE}/api/admin/stats`, adminAuth, (req, res) => {
   const stats = queryOne(
     `SELECT
       COUNT(*) as total,
@@ -293,9 +296,9 @@ app.get("/api/admin/stats", adminAuth, (req, res) => {
 // --- 生产模式：serve 前端静态文件 ---
 const distPath = path.join(__dirname, "..", "dist");
 if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath, { maxAge: "30d", immutable: true }));
-  app.get("/{*path}", (req, res, next) => {
-    if (req.path.startsWith("/api") || req.path.startsWith("/admin") || req.path.startsWith("/uploads")) {
+  app.use(`${BASE}`, express.static(distPath, { maxAge: "30d", immutable: true }));
+  app.get(`${BASE}/{*path}`, (req, res, next) => {
+    if (req.path.startsWith(`${BASE}/api`) || req.path.startsWith(`${BASE}/admin`) || req.path.startsWith(`${BASE}/uploads`)) {
       return next();
     }
     res.sendFile(path.join(distPath, "index.html"));

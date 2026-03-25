@@ -87,9 +87,39 @@ export default function FormSection({ onSubmit, onOpenQuery }: FormSectionProps)
     }
   }
 
-  function handleSubmit() {
-    if (!form.agreed) return;
-    onSubmit();
+  const [submitting, setSubmitting] = useState(false);
+
+  async function handleSubmit() {
+    if (!form.agreed || submitting) return;
+    if (!form.name || !form.phone || !form.province || !form.city || !form.dealer) {
+      alert("请填写完整信息");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", form.name);
+      fd.append("phone", form.phone);
+      fd.append("province", form.province);
+      fd.append("city", form.city);
+      fd.append("dealer", form.dealer);
+      if (form.orderPhoto) fd.append("orderPhoto", form.orderPhoto);
+      if (form.selfiePhoto) fd.append("selfiePhoto", form.selfiePhoto);
+
+      const res = await fetch("/milk_tea/api/submit", { method: "POST", body: fd });
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "提交失败");
+        return;
+      }
+      onSubmit();
+    } catch {
+      alert("网络错误，请稍后重试");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   function openPicker(target: PickerTarget) {
@@ -244,10 +274,10 @@ export default function FormSection({ onSubmit, onOpenQuery }: FormSectionProps)
 
         <button
           className="submit-btn"
-          disabled={!form.agreed}
+          disabled={!form.agreed || submitting}
           onClick={handleSubmit}
         >
-          提交打卡
+          {submitting ? "提交中..." : "提交打卡"}
         </button>
 
         {/* 演示入口：查询中奖信息 */}
