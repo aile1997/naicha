@@ -200,8 +200,8 @@ async function loadSubmissions(page = 1) {
       <td>${r.province}</td>
       <td>${r.city}</td>
       <td title="${r.dealer}">${r.dealer.length > 12 ? r.dealer.slice(0, 12) + "..." : r.dealer}</td>
-      <td>${r.order_photo ? `<img class="photo-thumb" src="/uploads/${r.order_photo}" onclick="preview('/uploads/${r.order_photo}')">` : "-"}</td>
-      <td>${r.selfie_photo ? `<img class="photo-thumb" src="/uploads/${r.selfie_photo}" onclick="preview('/uploads/${r.selfie_photo}')">` : "-"}</td>
+      <td>${r.order_photo ? `<img class="photo-thumb" src="/milk_tea/uploads/${r.order_photo}" onclick="preview('/milk_tea/uploads/${r.order_photo}')">` : "-"}</td>
+      <td>${r.selfie_photo ? `<img class="photo-thumb" src="/milk_tea/uploads/${r.selfie_photo}" onclick="preview('/milk_tea/uploads/${r.selfie_photo}')">` : "-"}</td>
       <td><span class="status-badge status-${r.status}">${{pending:"待审核",approved:"已通过",rejected:"已拒绝"}[r.status]}</span></td>
       <td>${r.created_at}</td>
       <td>
