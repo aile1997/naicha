@@ -96,7 +96,26 @@ function queryAll(sql, params = []) {
   return rows;
 }
 
+// 从 codes.json 加载真实兑换码池
+const codesPool = (() => {
+  try {
+    const codesPath = path.join(__dirname, "codes.json");
+    return JSON.parse(fs.readFileSync(codesPath, "utf-8"));
+  } catch {
+    console.warn("未找到 codes.json，将使用随机生成兑换码");
+    return [];
+  }
+})();
+
 function generateCode() {
+  // 优先从码池中取下一个未使用的码
+  if (codesPool.length > 0) {
+    const usedCodes = new Set(queryAll("SELECT prize_code FROM winners").map(r => r.prize_code));
+    const next = codesPool.find(c => !usedCodes.has(c));
+    if (next) return next;
+    console.warn("码池已用完，降级为随机生成");
+  }
+  // 降级：随机生成
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   const parts = [];
   for (let p = 0; p < 4; p++) {
@@ -277,7 +296,7 @@ app.get(`${BASE}/api/admin/stats`, adminAuth, (req, res) => {
 
   const winnersRow = queryOne("SELECT COUNT(*) as count FROM winners");
   const winners = winnersRow?.count || 0;
-  const quota = 5000;
+  const quota = codesPool.length || 5000;
   res.json({ ...stats, winners, quota, remaining: quota - winners });
 });
 
