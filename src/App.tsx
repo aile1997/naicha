@@ -7,7 +7,7 @@ import "./App.css";
 
 const ResultModal = lazy(() => import("./components/ResultModal"));
 
-// 活动时间：3月28日-4月6日，每日 9:00-18:00（北京时间 UTC+8）
+// 活动时间：3月25日-4月27日，每日 9:00-18:00（北京时间 UTC+8）
 function isActivityOpen(): boolean {
   // 获取北京时间
   const now = new Date();
@@ -19,9 +19,9 @@ function isActivityOpen(): boolean {
   const day = beijing.getDate();
   const hour = beijing.getHours();
 
-  // 日期范围：2026年3月25日 ~ 2026年4月6日
+  // 日期范围：2026年3月25日 ~ 2026年4月27日
   const dateNum = year * 10000 + month * 100 + day;
-  if (dateNum < 20260325 || dateNum > 20260406) return false;
+  if (dateNum < 20260325 || dateNum > 20260427) return false;
 
   // 时间范围：9:00 ~ 18:00
   if (hour < 9 || hour >= 18) return false;
